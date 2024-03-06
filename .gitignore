@@ -119,6 +119,7 @@ venv/
 ENV/
 env.bak/
 venv.bak/
+Pydev-parcijalni/
 
 # Spyder project settings
 .spyderproject
