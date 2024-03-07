@@ -1,6 +1,6 @@
 import tkinter as tk
 from tkinter import IntVar, StringVar
-from database_mngr import get_names_from_db, get_user
+from services.database_mngr import get_names_from_db, get_user
 
 #region CONSTANTS
 

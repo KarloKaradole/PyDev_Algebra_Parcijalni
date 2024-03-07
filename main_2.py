@@ -1,7 +1,8 @@
 import tkinter as tk
 from tkinter import IntVar, StringVar
 import itertools
-from database_mngr import get_user, get_names_from_db
+from services.database_mngr import get_user, get_names_from_db
+from database.user_data import user_data
 
 #region CONSTANTS
 
@@ -21,19 +22,42 @@ def show_pin_panel():
 def show_admin_panel():
     admin_lbl_frame.pack(padx=10,pady=10)
     
+def show_pin_admin_panel():
+    system_admin_window = tk.Toplevel(main_window)
+    system_admin_window.title("")
+    system_admin_window.geometry("220x100")
+    
+    message_label = tk.Label(system_admin_window, text="Run system administration?",font=("Arial", 12))
+    message_label.pack()
+    
+    yes_button = tk.Button(system_admin_window, text="Yes", width=10, height=2, command=lambda: (show_admin_panel(), close_window(system_admin_window)))
+    yes_button.pack(side=tk.LEFT, padx=15)
+    
+    no_button = tk.Button(system_admin_window, text="No",width=15,height=2, command= lambda: (close_window(system_admin_window)))
+    no_button.pack(side=tk.RIGHT, padx=15)
+    
+def close_window(window):
+    window.destroy()
+    
 def hide_pin_panel(panel):
     panel.pack_forget()
-       
+         
 def leave(event):
     print(f"Mis nije iznad gumba. {event}")
     
 def on_element_clicked(event):
     index = admin_status_text.curselection()
-    value = admin_status_text.get(index)
-    user = get_user(value.split(" ")[0])
-    #TODO popuniti vrijednosti u widgetima preko Vars (StringVar, IntVar, ...)
+    if index:
+        selected_item = admin_status_text.get(index[0])
+        details = selected_item.split(", ")
+        admin_first_name_textbox.delete("1.0", tk.END)
+        admin_first_name_textbox.insert(tk.END, details[1])
+        admin_last_name_textbox.delete("1.0", tk.END)
+        admin_last_name_textbox.insert(tk.END, details[0])
+        admin_PIN_textbox.delete("1.0", tk.END)
+        admin_PIN_textbox.insert(tk.END, details[2])
+        
     
-    print(f"Index {index} Value: {value}")
 
 def open_hello_window():
     hello_window = tk.Toplevel(main_window)
@@ -51,20 +75,39 @@ def open_hello_window():
     
     update_loading_label()
     main_window.withdraw()  
-    
+
 def check_pin():
+    global user_data
     entered_pin = entry_pin.get()
-    future_pin_list = ["1234", "5678", "9876", "5432"]
-    if entered_pin in future_pin_list:
-        print("PIN exists in the future list.")
-    else:
-        print("PIN does not exist in the future list.")
+    if entered_pin in user_data.keys():
+        print_user_details(entered_pin)
+    if entered_pin == "9999":
+        show_pin_admin_panel()
+        #show_admin_panel()
+    if entered_pin not in user_data.keys() and entered_pin != "9999":
+        PIN_status_text.insert(tk.END, "\n\n\n\nPIN unsuccessful.\n\n\n")
+        PIN_status_text.tag_configure("center", justify="center", font=("Arial", 16))
+        PIN_status_text.tag_add("center","1.0","end")
+           
+def print_user_details(entered_pin):
+    global user_data
+    PIN_status_text.tag_configure("center", justify="center", font=("Arial", 16))
+    PIN_status_text.insert(tk.END, "\nPIN successful.\n")
+    PIN_status_text.tag_add("center","1.0","end")
+    PIN_status_text.insert(tk.END, "\n\nWelcome!\n\n\n")
+    PIN_status_text.tag_add("center","2.0","end")
+    PIN_status_text.insert(tk.END, user_data[entered_pin]["FirstName"] + "\n")
+    PIN_status_text.tag_add("center","3.0","end")
+    PIN_status_text.insert(tk.END, user_data[entered_pin]["LastName"] + "\n")
+    PIN_status_text.tag_add("center","4.0","end")
         
 def update_entry_pin(number):
     current_pin = entry_pin.get()
     if number == "C":
         entry_pin.delete(0, tk.END)
+        PIN_status_text.delete("1.0", tk.END)
     elif number == "E":
+        PIN_status_text.delete("1.0", tk.END)
         check_pin()
     elif len(current_pin) < 4:
         entry_pin.delete(0, tk.END)
@@ -77,7 +120,7 @@ def erase():
     pass
     
 def exitall():
-    main_window.destroy
+    main_window.destroy()
 #endregion
 
 #region BUTTON PANEL
@@ -118,11 +161,10 @@ big_label = tk.Label(pin_lbl_frame,
                      font=("Arial", 16))
 big_label.grid(row=0, column=20, pady=10)
 
-admin_status_text = tk.Text(pin_lbl_frame,
+PIN_status_text = tk.Text(pin_lbl_frame,
                       height=15,
                       width=34)
-admin_status_text.grid(row=1, column=20,padx=10, rowspan=10)
-
+PIN_status_text.grid(row=1, column=20,padx=10, rowspan=10)
 
 # Left side - PIN
 lbl_pin_entry = tk.Label(pin_lbl_frame,
@@ -146,12 +188,20 @@ for number in numbers:
 
 #endregion
 
-unlock_button = tk.Button(pin_lbl_frame,
+#region PIN PANEL_ADMINISTRATOR
+
+pin_admin_lbl_frame = tk.LabelFrame(main_window,
+                                    text="System Administration",
+                                    padx=10,
+                                    pady=10)
+
+unlock_pin_button = tk.Button(pin_admin_lbl_frame,
                         text="UNLOCK",
-                        command=show_admin_panel,
+                        command=show_pin_admin_panel,
                         width=15,
                         height=3)
-unlock_button.grid(row=9,column=1,sticky="SE")
+unlock_pin_button.grid(row=1,column=10,sticky="SE",padx=25)
+#endregion
 
 #region ADMIN PANEL
 admin_lbl_frame = tk.LabelFrame(main_window,
@@ -163,10 +213,10 @@ admin_status_text = tk.Listbox(admin_lbl_frame,
                             width=34)
 admin_status_text.grid(row=1, column=0,padx=10,rowspan=5)
 
-#TODO names = get_names_from_db()
-names = ["Pero Peric", "Ana Anic", "Marko Maric", "Josip Josic", "Iva Ivic"]
-for name in names:
-    admin_status_text.insert(tk.END,name)
+
+for pin, data in user_data.items():
+    details =f"{data['LastName']}, {data['FirstName']}, {data['PIN']}, {data['(In)Active']}"
+    admin_status_text.insert(tk.END,details)
 
 admin_first_name_text = tk.Label(admin_lbl_frame,
                                  font=("Arial", 16),
@@ -174,10 +224,9 @@ admin_first_name_text = tk.Label(admin_lbl_frame,
 admin_first_name_text.grid(row=1,column=1,padx=10,pady=10)
 
 admin_first_name_textbox = tk.Text(admin_lbl_frame,
-                            height=2,
-                            width=15)
+                                   height=2,
+                                   width=15)
 admin_first_name_textbox.grid(row=1, column=2,padx=10,columnspan=2)
-
 
 admin_last_name_text = tk.Label(admin_lbl_frame,
                                 font=("Arial", 14),
@@ -199,6 +248,8 @@ admin_PIN_textbox = tk.Text(admin_lbl_frame,
                             height=2,
                             width=15)
 admin_PIN_textbox.grid(row=3, column=2,padx=10,columnspan=2)
+
+admin_status_text.bind("<<ListboxSelect>>", on_element_clicked)
 
 #region Checkbutton
 cb_expand_var = IntVar()
